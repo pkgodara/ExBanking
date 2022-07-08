@@ -25,7 +25,7 @@ defmodule ExBanking do
           {:ok, new_balance :: number}
           | {:error, :wrong_arguments | :user_does_not_exist | :too_many_requests_to_user}
   def deposit(user, amount, currency)
-      when is_binary(user) and is_number(amount) and is_binary(currency) do
+      when is_binary(user) and is_number(amount) and is_binary(currency) and amount > 0 do
     with {:ok, account} <- get_account(user),
          :ok <- RateLimit.inc(account) do
       try do
@@ -46,7 +46,7 @@ defmodule ExBanking do
              | :not_enough_money
              | :too_many_requests_to_user}
   def withdraw(user, amount, currency)
-      when is_binary(user) and is_number(amount) and is_binary(currency) do
+      when is_binary(user) and is_number(amount) and is_binary(currency) and amount > 0 do
     with {:ok, account} <- get_account(user),
          :ok <- RateLimit.inc(account) do
       try do
@@ -83,7 +83,8 @@ defmodule ExBanking do
              | :too_many_requests_to_sender
              | :too_many_requests_to_receiver}
   def send(from, to, amount, currency)
-      when is_binary(from) and is_binary(to) and is_number(amount) and is_binary(currency) do
+      when is_binary(from) and is_binary(to) and is_number(amount) and is_binary(currency) and
+             amount > 0 do
     with {:ok, from_account} <- get_account(from, :sender_does_not_exist),
          {:ok, to_account} <- get_account(to, :receiver_does_not_exist),
          :ok <- RateLimit.inc(from_account),
@@ -111,7 +112,7 @@ defmodule ExBanking do
     with {:ok, account} <- get_account(user),
          :ok <- can_handle_load?(account),
          {:ok, balances} <- Account.deposit(account, amount, currency) do
-      {:ok, Map.get(balances, currency, 0)}
+      {:ok, balances |> Map.get(currency, 0) |> num_round()}
     end
   end
 
@@ -119,7 +120,7 @@ defmodule ExBanking do
     with {:ok, account} <- get_account(user),
          :ok <- can_handle_load?(account),
          {:ok, balances} <- Account.withdraw(account, amount, currency) do
-      {:ok, Map.get(balances, currency, 0)}
+      {:ok, balances |> Map.get(currency, 0) |> num_round()}
     end
   end
 
@@ -129,13 +130,14 @@ defmodule ExBanking do
          :ok <- can_handle_load?(from_account, :too_many_requests_to_sender),
          :ok <- can_handle_load?(to_account, :too_many_requests_to_receiver),
          {:ok, from_bal, to_bal} <- Account.transfer(from_account, to_account, amount, currency) do
-      {:ok, Map.get(from_bal, currency, 0), Map.get(to_bal, currency, 0)}
+      {:ok, from_bal |> Map.get(currency, 0) |> num_round(),
+       to_bal |> Map.get(currency, 0) |> num_round()}
     end
   end
 
   defp do_get_balance(user, currency) do
     with {:ok, account} <- get_account(user) do
-      Account.get_balance(account, currency)
+      account |> Account.get_balance(currency) |> num_round()
     end
   end
 
@@ -159,5 +161,9 @@ defmodule ExBanking do
     else
       :ok
     end
+  end
+
+  defp num_round(num) do
+    round(num * 100) / 100
   end
 end
