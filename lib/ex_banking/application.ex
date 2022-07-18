@@ -8,9 +8,6 @@ defmodule ExBanking.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {Mutex, name: ExBanking.Mutex},
-      ExBanking.RateLimit,
-      # ExBanking.Banking,
       ExBanking.UserSupervisor
       # Starts a worker by calling: ExBanking.Worker.start_link(arg)
       # {ExBanking.Worker, arg}

@@ -8,13 +8,9 @@ defmodule ExBanking.UserSupervisor do
   @doc """
   Starts the given job as a child process.
   """
-  @spec start_child(module, list(term)) :: DynamicSupervisor.on_start_child()
-  def start_child(processor, args) do
-    DynamicSupervisor.start_child(__MODULE__, %{
-      id: args[:name],
-      start: {processor, :start_link, args}
-      # restart: :temporary
-    })
+  @spec start_child(child_specs :: any()) :: DynamicSupervisor.on_start_child()
+  def start_child(child_specs) do
+    DynamicSupervisor.start_child(__MODULE__, child_specs)
   end
 
   @spec start_link(keyword) :: {:ok, pid} | :ignore | {:error, any}
